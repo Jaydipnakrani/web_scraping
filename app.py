@@ -5,18 +5,19 @@ from bs4 import BeautifulSoup as bs
 from urllib.request import urlopen as uReq
 import logging
 logging.basicConfig(filename="scrapper.log" , level=logging.INFO)
+import pymongo  #by default not available sothat run code and then pip install pymongo
 
 app = Flask(__name__)
 
 @app.route("/", methods = ['GET'])
 def homepage():
-    return render_template("index.html")
+    return render_template("index.html")      #this is first open page
 
-@app.route("/review" , methods = ['POST' , 'GET'])
+@app.route("/review" , methods = ['POST' , 'GET'])      #search on click then route call
 def index():
-    if request.method == 'POST':
+    if request.method == 'POST':      #means form throgh data put
         try:
-            searchString = request.form['content'].replace(" ","")
+            searchString = request.form['content'].replace(" ","")      #replace to space remove
             flipkart_url = "https://www.flipkart.com/search?q=" + searchString
             uClient = uReq(flipkart_url)
             flipkartPage = uClient.read()
@@ -36,7 +37,7 @@ def index():
             fw = open(filename, "w")
             headers = "Product, Customer Name, Rating, Heading, Comment \n"
             fw.write(headers)
-            reviews = []
+            reviews = []      #dictonary value append in this list
             for commentbox in commentboxes:
                 try:
                     #name.encode(encoding='utf-8')
@@ -68,11 +69,22 @@ def index():
                 except Exception as e:
                     logging.info(e)
 
+
+                #every iteration dictonary create
                 mydict = {"Product": searchString, "Name": name, "Rating": rating, "CommentHead": commentHead,
                           "Comment": custComment}
-                reviews.append(mydict)
+                reviews.append(mydict)  #apend in list
             logging.info("log my final result {}".format(reviews))
-            return render_template('result.html', reviews=reviews[0:(len(reviews)-1)])
+
+            # mongodb in as a list store data,connetion,connect to mongodb
+            client = pymongo.MongoClient("mongodb+srv://Jaydip123:Jaydip8141@cluster0.gdppk9f.mongodb.net/?retryWrites=true&w=majority")
+            db = client['review_scrap']   #database name
+            # become collection because to data store
+            review_col = db['review_scrap_data']
+            review_col.insert_many(reviews)   #add review list then data store in mogodb
+
+
+            return render_template('result.html', reviews=reviews[0:(len(reviews)-1)])  #review one by one remove then append dictonary
         except Exception as e:
             logging.info(e)
             return 'something is wrong'
